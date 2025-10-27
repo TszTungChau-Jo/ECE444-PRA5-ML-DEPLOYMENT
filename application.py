@@ -34,7 +34,7 @@ def health():
 def predict():
     """
     JSON body: {"text": "<news snippet>"}
-    Returns: {"prediction": 0|1, "label": "real|fake", "proba": 0.0-1.0 (if available)}
+    Returns 1 for FAKE, 0 for REAL (strings are also echoed).
     """
     data = request.get_json(silent=True) or {}
     text = data.get("text", "")
@@ -43,20 +43,44 @@ def predict():
         return jsonify(error="Provide a non-empty 'text' string in JSON body."), 400
 
     X = vectorizer.transform([text])
-    y = int(classifier.predict(X)[0])
 
-    # Try to include probability if the model supports it
+    # Model may return strings like "FAKE"/"REAL"
+    raw = classifier.predict(X)[0]               # e.g., "FAKE", "REAL", 1, 0, etc.
+    raw_str = str(raw).strip().lower()           # handle numpy.str_ etc.
+
+    # Normalize to numeric: FAKE -> 1, REAL -> 0
+    label_map = {"fake": 1, "real": 0}
+    if raw_str in label_map:
+        y = label_map[raw_str]
+    else:
+        # If the model already returns numeric labels, keep them
+        try:
+            y = int(raw)
+        except Exception:
+            # Fallback if label is unexpected
+            y = 1 if "fake" in raw_str else 0
+
+    # Optional: probability if available; try to pick prob of "fake"
     proba = None
     try:
-        proba = float(classifier.predict_proba(X)[0][1])  # prob of class 1 (fake)
+        probs = classifier.predict_proba(X)[0]
+        # If classifier.classes_ are strings like ['FAKE','REAL'], find index for 'fake'
+        if hasattr(classifier, "classes_"):
+            classes = [str(c).strip().lower() for c in classifier.classes_]
+            idx_fake = classes.index("fake") if "fake" in classes else 1  # default to positive class at 1
+            proba = float(probs[idx_fake])
+        else:
+            proba = float(probs[1])  # common convention: class 1 is positive
     except Exception:
         pass
 
     return jsonify(
-        prediction=y,
+        prediction=y,                    # 1 or 0
         label="fake" if y == 1 else "real",
+        raw_label=str(raw),              # echo original model label to help debugging
         proba=proba
     )
+
 
 if __name__ == "__main__":
     # Handy for local testing; Beanstalk will use WSGI
