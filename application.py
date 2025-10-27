@@ -74,6 +74,7 @@ def predict():
     except Exception:
         pass
 
+    # Return structured JSON response
     return jsonify(
         prediction=y,                    # 1 or 0
         label="fake" if y == 1 else "real",
