@@ -28,6 +28,90 @@ and returns a JSON response indicating the classification result:
 
 ---
 
+## AWS Deployment & Performance Results
+
+### Deployment Summary
+The model was deployed using **AWS Elastic Beanstalk** with the following configuration:
+
+| Item | Details |
+|------|---------|
+| Cloud Provider | AWS |
+| Service | Elastic Beanstalk (EC2 + Load Balancer) |
+| Platform | Python 3.13 running on 64-bit Amazon Linux 2023 |
+| Deployment Package | `PRA5-Deployment.zip` |
+| Endpoint URL | http://detect-fake-news-env.eba-seezhc2y.us-east-1.elasticbeanstalk.com |
+| Health Status | OK (Green) |
+| Model Location | `/var/app/current/basic_classifier.pkl` |
+
+Application UI Screenshot:  
+*(Rendered from AWS deployment)*  
+![UI Screenshot](aws_perf_results/ui_screenshot.png)
+
+---
+
+### Functional Test
+
+The following command was used to validate the `/predict` API endpoint:
+
+```bash
+python functional_test.py https://detect-fake-news-env.eba-seezhc2y.us-east-1.elasticbeanstalk.com/predict
+```
+
+---
+
+### Performance Test Results (AWS)
+
+A performance test of **100 predictions per test case** was executed using `perf_test.py`.  
+All measured latency values are in **milliseconds (ms)**.
+
+#### Summary Table
+
+| Test Case | Mean (ms) | Median (ms) | Min (ms) | Max (ms) |
+|-----------|-----------|-------------|----------|----------|
+| fake1 | 27.41 | 26.74 | 24.32 | 262.72 |
+| fake2 | 28.16 | 27.22 | 24.12 | 265.53 |
+| real1 | 27.73 | 27.13 | 24.36 | 46.62 |
+| real2 | 27.95 | 27.17 | 24.32 | 41.80 |
+
+Raw CSV results are stored in `aws_perf_results/`:
+```
+aws_perf_results/
+ ├── fake1.csv
+ ├── fake2.csv
+ ├── real1.csv
+ ├── real2.csv
+ └── summary.csv
+```
+
+---
+
+### Latency Boxplot (Linear Scale)
+
+![Latency Boxplot](aws_perf_results/latency_boxplot.png)
+
+---
+
+### Latency Boxplot (Log Scale)
+
+![Latency Boxplot Log](aws_perf_results/latency_boxplot_log.png)
+
+---
+
+### Observations & Notes
+
+* The majority of predictions returned in **~25–30 ms**, which is acceptable API latency.
+* Occasional outliers (`>200ms`) are due to:
+  - AWS cold starts
+  - Network routing + SSL handshake time
+  - Load balancer warm-up behavior
+* Latency between **fake vs real text inputs is nearly identical**, showing model inference time dominates request time.
+* Performance on AWS is ~5× slower than localhost (~5–7 ms) — expected due to:
+  - Remote network delay
+  - EC2 instance class used by Elastic Beanstalk
+  - No request batching or async inference
+
+---
+
 ## Local Setup
 
 1. Clone or download the repository.
