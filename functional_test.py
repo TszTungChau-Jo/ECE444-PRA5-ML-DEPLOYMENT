@@ -1,7 +1,7 @@
 # functional_tests.py
-import requests, json, sys
+import requests, sys
 
-ENDPOINT = sys.argv[1] if len(sys.argv) > 1 else "http://127.0.0.1:5000/predict"
+ENDPOINT = sys.argv[1] if len(sys.argv) > 1 else "http://127.0.0.1:8000/predict"
 
 tests = {
     "fake1": "BREAKING: Scientists confirm Moon is made of cheese!",
@@ -11,5 +11,5 @@ tests = {
 }
 
 for name, text in tests.items():
-    r = requests.post(ENDPOINT, json={"text": text}, timeout=10)
+    r = requests.post(ENDPOINT, json={"message": text}, timeout=10)
     print(name, r.status_code, r.json())
